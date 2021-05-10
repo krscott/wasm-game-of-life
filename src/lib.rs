@@ -2,6 +2,7 @@ mod utils;
 
 use std::fmt;
 
+use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -28,6 +29,21 @@ impl fmt::Display for Cell {
     }
 }
 
+impl From<Cell> for bool {
+    fn from(cell: Cell) -> Self {
+        cell == Cell::Alive
+    }
+}
+
+impl From<bool> for Cell {
+    fn from(x: bool) -> Self {
+        match x {
+            true => Cell::Alive,
+            false => Cell::Dead,
+        }
+    }
+}
+
 impl Cell {
     pub fn random() -> Self {
         #[allow(unused_unsafe)]
@@ -44,7 +60,7 @@ impl Cell {
 pub struct Universe {
     width: u32,
     height: u32,
-    cells: Vec<Cell>,
+    cells: FixedBitSet,
 }
 
 impl Universe {
@@ -63,12 +79,12 @@ impl Universe {
     }
 
     fn get_cell(&self, row: i32, column: i32) -> Cell {
-        self.cells[self.get_index(row, column)]
+        self.cells[self.get_index(row, column)].into()
     }
 
     fn set_cell(&mut self, row: i32, column: i32, cell: Cell) {
         let idx = self.get_index(row, column);
-        self.cells[idx] = cell;
+        self.cells.set(idx, cell.into());
     }
 
     fn live_neighbor_count(&self, row: i32, column: i32) -> u8 {
@@ -94,41 +110,15 @@ impl Universe {
     }
 }
 
-impl fmt::Display for Universe {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for line in self.cells.chunks(self.width as usize) {
-            for &cell in line {
-                write!(f, "{}", cell)?;
-            }
-            write!(f, "\n")?;
-        }
-
-        Ok(())
-    }
-}
-
 #[wasm_bindgen]
 impl Universe {
-    pub fn with_test_pattern(width: u32, height: u32) -> Self {
-        let cells = (0..width * height)
-            .map(|i| {
-                if i % 2 == 0 || i % 7 == 0 {
-                    Cell::Alive
-                } else {
-                    Cell::Dead
-                }
-            })
-            .collect();
-
-        Universe {
-            width,
-            height,
-            cells,
-        }
-    }
-
     pub fn empty(width: u32, height: u32) -> Self {
-        let cells = (0..width * height).map(|_| Cell::Dead).collect();
+        let size = (width * height) as usize;
+        let mut cells = FixedBitSet::with_capacity(size);
+
+        for i in 0..size {
+            cells.set(i, Cell::Dead.into());
+        }
 
         Universe {
             width,
@@ -155,13 +145,13 @@ impl Universe {
     }
 
     pub fn random(width: u32, height: u32) -> Self {
-        let cells = (0..width * height).map(|_| Cell::random()).collect();
+        let mut univ = Self::empty(width, height);
 
-        Universe {
-            width,
-            height,
-            cells,
+        for i in 0..univ.cells.len() {
+            univ.cells.set(i, Cell::random().into())
         }
+
+        univ
     }
 
     pub fn insert_from_str(&mut self, row: i32, col: i32, cells_str: &str) {
@@ -181,24 +171,22 @@ impl Universe {
     }
 
     pub fn tick(&mut self) {
-        self.cells = self
-            .cells
-            .iter()
-            .enumerate()
-            .map(|(i, cell)| {
-                let (r, c) = self.get_coord(i);
-                let live_neighbors = self.live_neighbor_count(r, c);
+        let mut new_cells = FixedBitSet::with_capacity((self.width * self.height) as usize);
 
-                match (cell, live_neighbors) {
-                    (Cell::Alive, 2) | (_, 3) => Cell::Alive,
-                    _ => Cell::Dead,
-                }
-            })
-            .collect();
-    }
+        for i in 0..self.cells.len() {
+            let (r, c) = self.get_coord(i);
+            let cell = self.get_cell(r, c);
+            let live_neighbors = self.live_neighbor_count(r, c);
 
-    pub fn render(&self) -> String {
-        self.to_string()
+            let new_cell = match (cell, live_neighbors) {
+                (Cell::Alive, 2) | (_, 3) => Cell::Alive,
+                _ => Cell::Dead,
+            };
+
+            new_cells.set(i, new_cell.into());
+        }
+
+        self.cells = new_cells;
     }
 
     pub fn width(&self) -> u32 {
@@ -209,7 +197,7 @@ impl Universe {
         self.height
     }
 
-    pub fn cells(&self) -> *const Cell {
-        self.cells.as_ptr()
+    pub fn cells(&self) -> *const u32 {
+        self.cells.as_slice().as_ptr()
     }
 }
