@@ -54,6 +54,11 @@ impl Universe {
         self.cells[self.get_index(row, column)]
     }
 
+    fn set_cell(&mut self, row: i32, column: i32, cell: Cell) {
+        let idx = self.get_index(row, column);
+        self.cells[idx] = cell;
+    }
+
     fn live_neighbor_count(&self, row: i32, column: i32) -> u8 {
         [
             (-1, -1),
@@ -92,10 +97,7 @@ impl fmt::Display for Universe {
 
 #[wasm_bindgen]
 impl Universe {
-    pub fn new() -> Self {
-        let width = 64;
-        let height = 64;
-
+    pub fn with_test_pattern(width: u32, height: u32) -> Self {
         let cells = (0..width * height)
             .map(|i| {
                 if i % 2 == 0 || i % 7 == 0 {
@@ -110,6 +112,49 @@ impl Universe {
             width,
             height,
             cells,
+        }
+    }
+
+    pub fn empty(width: u32, height: u32) -> Self {
+        let cells = (0..width * height).map(|_| Cell::Dead).collect();
+
+        Universe {
+            width,
+            height,
+            cells,
+        }
+    }
+
+    pub fn with_single_spaceship(width: u32, height: u32) -> Self {
+        let mut univ = Self::empty(width, height);
+
+        let mid_row = height as i32 / 2 - 2;
+        let mid_col = width as i32 / 2 - 2;
+        let glider = "\
+            1__1_\n\
+            ____1\n\
+            1___1\n\
+            _1111\n\
+        ";
+
+        univ.insert_from_str(mid_row, mid_col, glider);
+
+        univ
+    }
+
+    pub fn insert_from_str(&mut self, row: i32, col: i32, cells_str: &str) {
+        for (dr, line) in cells_str.split('\n').enumerate() {
+            let line = line.trim_matches('\r');
+
+            for (dc, ch) in line.chars().enumerate() {
+                let cell = if ch == ' ' || ch == '0' || ch == '_' {
+                    Cell::Dead
+                } else {
+                    Cell::Alive
+                };
+
+                self.set_cell(row + dr as i32, col + dc as i32, cell);
+            }
         }
     }
 
