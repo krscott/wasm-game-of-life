@@ -76,6 +76,13 @@ impl Cell {
             Cell::Alive
         }
     }
+
+    pub fn toggled(&self) -> Self {
+        match self {
+            Cell::Dead => Cell::Alive,
+            Cell::Alive => Cell::Dead,
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -167,9 +174,7 @@ impl Universe {
     pub fn random(width: u32, height: u32) -> Self {
         let mut univ = Self::empty(width, height);
 
-        for i in 0..univ.cells.len() {
-            univ.cells.set(i, Cell::random().into())
-        }
+        univ.randomize();
 
         univ
     }
@@ -213,6 +218,21 @@ impl Universe {
         }
 
         self.cells = new_cells;
+    }
+
+    pub fn toggle_cell(&mut self, row: i32, column: i32) {
+        let cell = self.get_cell(row, column).toggled();
+        self.set_cell(row, column, cell);
+    }
+
+    pub fn clear(&mut self) {
+        self.cells.clear()
+    }
+
+    pub fn randomize(&mut self) {
+        for i in 0..self.cells.len() {
+            self.cells.set(i, Cell::random().into())
+        }
     }
 
     pub fn width(&self) -> u32 {

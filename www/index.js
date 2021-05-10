@@ -21,6 +21,9 @@ const universe = Universe.random(64, 64)
 
 const width = universe.width()
 const height = universe.height()
+let animationId = null
+let ticksPerFrame = 1.0
+let tickCounter = 0.0
 
 const canvas = document.getElementById("game-of-life-canvas")
 canvas.height = (CELL_SIZE_PX + 1) * height + 1
@@ -29,11 +32,27 @@ canvas.width = (CELL_SIZE_PX + 1) * width + 1
 const ctx = canvas.getContext("2d")
 
 const playPauseButton = document.getElementById("play-pause")
+const randomizeButton = document.getElementById("randomize-button")
+const clearButton = document.getElementById("clear-button")
+const speedInput = document.getElementById("speed-input")
 
-drawGrid()
-drawCells()
 
-let animationId = null
+canvas.addEventListener("click", event => {
+    const boundingRect = canvas.getBoundingClientRect()
+
+    const scaleX = canvas.width / boundingRect.width
+    const scaleY = canvas.height / boundingRect.height
+
+    const canvasLeft = (event.clientX - boundingRect.left) * scaleX
+    const canvasTop = (event.clientY - boundingRect.top) * scaleY
+
+    const row = Math.min(Math.floor(canvasTop / (CELL_SIZE_PX + 1)), height - 1)
+    const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE_PX + 1)), width - 1)
+
+    universe.toggle_cell(row, col)
+
+    draw()
+})
 
 playPauseButton.addEventListener("click", event => {
     if (isPaused()) {
@@ -43,17 +62,41 @@ playPauseButton.addEventListener("click", event => {
     }
 })
 
+clearButton.addEventListener("click", event => {
+    universe.clear()
+})
 
+randomizeButton.addEventListener("click", event => {
+    universe.randomize()
+})
+
+speedInput.addEventListener("change", event => {
+    ticksPerFrame = Math.pow(2, event.target.value) - 1
+
+    console.log(ticksPerFrame)
+})
+
+
+draw()
 play()
 
 
 function renderLoop() {
-    universe.tick()
+    tickCounter += ticksPerFrame
 
-    drawGrid()
-    drawCells()
+    while (tickCounter >= 1.0) {
+        tickCounter -= 1.0
+        universe.tick()
+    }
+
+    draw()
 
     animationId = requestAnimationFrame(renderLoop)
+}
+
+function draw() {
+    drawGrid()
+    drawCells()
 }
 
 function isPaused() {
