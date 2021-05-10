@@ -19,16 +19,6 @@ pub enum Cell {
     Alive = 1,
 }
 
-impl fmt::Display for Cell {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let symbol = match self {
-            Cell::Dead => '◻',
-            Cell::Alive => '◼',
-        };
-        write!(f, "{}", symbol)
-    }
-}
-
 impl From<Cell> for bool {
     fn from(cell: Cell) -> Self {
         cell == Cell::Alive
@@ -44,7 +34,30 @@ impl From<bool> for Cell {
     }
 }
 
+impl From<Cell> for char {
+    fn from(cell: Cell) -> Self {
+        match cell {
+            Cell::Dead => '◻',
+            Cell::Alive => '◼',
+        }
+    }
+}
+
+impl fmt::Display for Cell {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", char::from(*self))
+    }
+}
+
 impl Cell {
+    pub fn from_char(ch: char) -> Option<Self> {
+        match ch {
+            '◻' => Some(Cell::Dead),
+            '◼' => Some(Cell::Alive),
+            _ => None,
+        }
+    }
+
     pub fn random() -> Self {
         #[allow(unused_unsafe)]
         let f = unsafe { js_sys::Math::random() };
@@ -57,13 +70,31 @@ impl Cell {
 }
 
 #[wasm_bindgen]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Universe {
     width: u32,
     height: u32,
     cells: FixedBitSet,
 }
 
+impl fmt::Display for Universe {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for r in 0..self.height {
+            for c in 0..self.width {
+                write!(f, "{}", self.get_cell(r as i32, c as i32))?;
+            }
+            write!(f, "\n")?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Universe {
+    pub fn get_cells(&self) -> &FixedBitSet {
+        &self.cells
+    }
+
     fn get_index(&self, row: i32, column: i32) -> usize {
         let row = row.rem_euclid(self.height as i32);
         let column = column.rem_euclid(self.width as i32);
@@ -127,23 +158,6 @@ impl Universe {
         }
     }
 
-    pub fn with_single_spaceship(width: u32, height: u32) -> Self {
-        let mut univ = Self::empty(width, height);
-
-        let mid_row = height as i32 / 2 - 2;
-        let mid_col = width as i32 / 2 - 2;
-        let glider = "\
-            1__1_\n\
-            ____1\n\
-            1___1\n\
-            _1111\n\
-        ";
-
-        univ.insert_from_str(mid_row, mid_col, glider);
-
-        univ
-    }
-
     pub fn random(width: u32, height: u32) -> Self {
         let mut univ = Self::empty(width, height);
 
@@ -154,20 +168,26 @@ impl Universe {
         univ
     }
 
-    pub fn insert_from_str(&mut self, row: i32, col: i32, cells_str: &str) {
-        for (dr, line) in cells_str.split('\n').enumerate() {
-            let line = line.trim_matches('\r');
+    pub fn from_str(s: &str) -> Self {
+        let s = s.trim();
 
-            for (dc, ch) in line.chars().enumerate() {
-                let cell = if ch == ' ' || ch == '0' || ch == '_' {
-                    Cell::Dead
-                } else {
-                    Cell::Alive
-                };
+        let grid: Vec<Vec<Cell>> = s
+            .split('\n')
+            .map(|line| line.chars().filter_map(|ch| Cell::from_char(ch)).collect())
+            .collect();
 
-                self.set_cell(row + dr as i32, col + dc as i32, cell);
+        let height = grid.len() as u32;
+        let width = grid.iter().map(|row| row.len()).max().unwrap_or(1) as u32;
+
+        let mut univ = Self::empty(width, height);
+
+        for (r, row) in grid.into_iter().enumerate() {
+            for (c, cell) in row.into_iter().enumerate() {
+                univ.set_cell(r as i32, c as i32, cell);
             }
         }
+
+        univ
     }
 
     pub fn tick(&mut self) {
