@@ -1,3 +1,12 @@
+# wasm-game-of-life
+
+Conway's Game of Life implemented in Rust WASM.
+
+Based on the [Rust WASM Book](https://rustwasm.github.io/docs/book/).
+
+
+# Template README
+
 <div align="center">
 
   <h1><code>wasm-pack-template</code></h1>
