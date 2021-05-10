@@ -19,6 +19,38 @@ const universe = Universe.random(64, 64)
 // ◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻◻
 // `)
 
+const glider = Universe.from_str(`
+◻◻◼
+◼◻◼
+◻◼◼
+`)
+
+const spaceship = Universe.from_str(`
+◼◻◻◼◻
+◻◻◻◻◼
+◼◻◻◻◼
+◻◼◼◼◼
+◻◻◻◻◻
+`)
+
+const pulsar = Universe.from_str(`
+◻◻◼◼◼◻◻◻◼◼◼◻◻
+◻◻◻◻◻◻◻◻◻◻◻◻◻
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◻◻◼◼◼◻◻◻◼◼◼◻◻
+◻◻◻◻◻◻◻◻◻◻◻◻◻
+◻◻◼◼◼◻◻◻◼◼◼◻◻
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◼◻◻◻◻◼◻◼◻◻◻◻◼
+◻◻◻◻◻◻◻◻◻◻◻◻◻
+◻◻◼◼◼◻◻◻◼◼◼◻◻
+`)
+
+
+
 const width = universe.width()
 const height = universe.height()
 let animationId = null
@@ -49,7 +81,15 @@ canvas.addEventListener("click", event => {
     const row = Math.min(Math.floor(canvasTop / (CELL_SIZE_PX + 1)), height - 1)
     const col = Math.min(Math.floor(canvasLeft / (CELL_SIZE_PX + 1)), width - 1)
 
-    universe.toggle_cell(row, col)
+    if (event.shiftKey) {
+        stamp(row, col, spaceship)
+    } else if (event.ctrlKey) {
+        stamp(row, col, pulsar)
+    } else if (event.altKey) {
+        stamp(row, col, glider)
+    } else {
+        universe.toggle_cell(row, col)
+    }
 
     draw()
 })
@@ -64,10 +104,12 @@ playPauseButton.addEventListener("click", event => {
 
 clearButton.addEventListener("click", event => {
     universe.clear()
+    draw()
 })
 
 randomizeButton.addEventListener("click", event => {
     universe.randomize()
+    draw()
 })
 
 speedInput.addEventListener("change", event => {
@@ -82,7 +124,7 @@ play()
 
 
 function renderLoop() {
-    tickCounter += ticksPerFrame
+    tickCounter += Math.max(0.01, ticksPerFrame)
 
     while (tickCounter >= 1.0) {
         tickCounter -= 1.0
@@ -97,6 +139,13 @@ function renderLoop() {
 function draw() {
     drawGrid()
     drawCells()
+}
+
+function stamp(row, col, pattern) {
+    row = Math.floor(row - pattern.height() / 2)
+    col = Math.floor(col - pattern.width() / 2)
+
+    universe.insert_universe(row, col, pattern)
 }
 
 function isPaused() {

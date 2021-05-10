@@ -220,6 +220,15 @@ impl Universe {
         self.cells = new_cells;
     }
 
+    pub fn insert_universe(&mut self, row: i32, column: i32, other: &Universe) {
+        for dr in 0..(other.width() as i32) {
+            for dc in 0..(other.height() as i32) {
+                let cell = other.get_cell(dr, dc);
+                self.set_cell(row + dr, column + dc, cell);
+            }
+        }
+    }
+
     pub fn toggle_cell(&mut self, row: i32, column: i32) {
         let cell = self.get_cell(row, column).toggled();
         self.set_cell(row, column, cell);
