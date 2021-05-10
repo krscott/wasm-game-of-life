@@ -28,6 +28,18 @@ impl fmt::Display for Cell {
     }
 }
 
+impl Cell {
+    pub fn random() -> Self {
+        #[allow(unused_unsafe)]
+        let f = unsafe { js_sys::Math::random() };
+        if f < 0.5 {
+            Cell::Dead
+        } else {
+            Cell::Alive
+        }
+    }
+}
+
 #[wasm_bindgen]
 pub struct Universe {
     width: u32,
@@ -140,6 +152,16 @@ impl Universe {
         univ.insert_from_str(mid_row, mid_col, glider);
 
         univ
+    }
+
+    pub fn random(width: u32, height: u32) -> Self {
+        let cells = (0..width * height).map(|_| Cell::random()).collect();
+
+        Universe {
+            width,
+            height,
+            cells,
+        }
     }
 
     pub fn insert_from_str(&mut self, row: i32, col: i32, cells_str: &str) {
