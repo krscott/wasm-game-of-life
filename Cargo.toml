@@ -32,6 +32,12 @@ js-sys = "0.3"
 # For compact storage of 1-bit cells
 fixedbitset = "0.4"
 
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "console",
+]
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
 

@@ -1,9 +1,18 @@
 mod utils;
 
-use std::fmt;
-
 use fixedbitset::FixedBitSet;
+use std::fmt;
 use wasm_bindgen::prelude::*;
+
+// A macro to provide `println!(..)`-style syntax for `console.log` logging.
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        #[allow(unused_unsafe)]
+        unsafe {
+            web_sys::console::log_1(&format!( $( $t )* ).into());
+        }
+    }
+}
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -132,18 +141,15 @@ impl Universe {
         .iter()
         .filter(|(dr, dc)| self.get_cell(row + *dr, column + *dc) == Cell::Alive)
         .count() as u8
-
-        // (-1..=1)
-        //     .flat_map(|dr| (-1..=1).map(move |dc| (dr, dc)))
-        //     .filter(|(dr, dc)| (*dr != 0 || *dc != 0))
-        //     .filter(|(dr, dc)| self.get_cell(row + dr, column + dc) == Cell::Alive)
-        //     .count() as u8
     }
 }
 
 #[wasm_bindgen]
 impl Universe {
     pub fn empty(width: u32, height: u32) -> Self {
+        utils::set_panic_hook();
+        log!("Panic hook enabled");
+
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 
